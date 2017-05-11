@@ -1,0 +1,169 @@
+importPackage(dw.system);
+importPackage(dw.web);
+importPackage(dw.util);
+
+function getJsonUtils() {
+	
+	var isPrimitive = function(obj) {
+		return obj === null || obj instanceof Date || ["number", "boolean", "string", "undefined"].indexOf(typeof obj) !== -1;
+	};
+	
+	var isString = function(obj) {
+		return typeof obj === "string";
+	}
+	
+	var isObject = function(obj) {
+		return typeof obj === "object";
+	};
+	
+	var isFunction = function(obj) {
+		return typeof obj === "function";
+	};
+	
+	var isCollection = function(obj) {
+		return obj instanceof dw.util.Collection || isJSArrayLikeObject(obj);
+	};	
+	
+	var isJSArrayLikeObject = function(obj) {
+		return !isPrimitive(obj) && "push" in obj && "pop" in obj && "shift" in obj 
+			&& "slice" in obj && "indexOf" in obj 
+			&& "sort" in obj && "splice" in obj; 
+	};
+	
+	var stringifyArray = function(array) {
+		var builder = [];
+		for(index in array) {
+			builder.push(stringify(array[index]));
+		}		
+		return "[" + builder.join(", ") + "]";
+	};
+	
+	var stringifyObject = function(obj) {		
+		var builder = [];		
+		for(var attribute in obj) {
+			try {
+				if(!isFunction(obj[attribute])) {
+					builder.push("\"" + attribute + "\": " + stringify(obj[attribute]));							
+				}
+			} 
+			catch (exception) { continue; }
+		}				
+		
+		return "{" + builder.join(", ") + "}";
+		
+	};
+	
+	var stringify = function(obj) {
+		if(isPrimitive(obj))
+			return JSON.stringify(obj);
+			
+		if(isFunction(obj))
+			return "";
+			
+		if(isCollection(obj)) {
+			return stringifyArray(obj);
+		}
+		
+		if(isObject(obj)) {
+			return stringifyObject(obj);			
+		}
+		
+		return "";
+	};	
+		
+	
+	var createProcessingObject = function(obj) {
+		return {
+			"key": null,
+			"value": obj,
+			"open": false,					
+			"first": false			
+		};
+	};
+	
+		
+	var stringifyWithoutRecursion = function(obj) {
+		
+		var json = [], 
+			processingObjectStack = [];
+			
+		var processing, nextProcessing, openProcessing, isProcessingCollection, first, processingValue;
+		
+		processing = createProcessingObject(obj);
+		processing.first = true;
+		processingObjectStack.push(processing);
+		
+		while(!empty(processingObjectStack)) {			
+			processing = processingObjectStack.pop();
+			processingValue = processing.value;
+			
+			if(isPrimitive(processingValue)) {				
+				json.unshift(JSON.stringify(processingValue));
+				if(!empty(processing.key)) {
+					json.unshift("\"" + processing.key + "\": ");
+				}					
+				if(!processing.first) {
+					json.unshift(" ,");
+				}
+				continue;
+			}
+			
+			isProcessingCollection =  isCollection(processingValue);
+			
+			if(processing.open) {
+				json.unshift(isProcessingCollection ? "[" : "{");
+				if(!empty(processing.key)) {
+					json.unshift("\"" + processing.key + "\": ");
+				}					
+				if(!processing.first) {
+					json.unshift(" ,");
+				}
+				continue;
+			}
+			
+			if(isObject(processingValue)) {
+				json.unshift(isProcessingCollection ? "]" : "}");
+			}			
+		
+			if(!isPrimitive(processingValue)) {
+				openProcessing = createProcessingObject(processingValue);
+				openProcessing.open = true;
+				openProcessing.first = processing.first;
+				openProcessing.key = processing.key;
+				processingObjectStack.push(openProcessing);
+			}
+			
+			
+			first = true;
+			for(var attr in processingValue) {		
+				try {
+					if(!isFunction(processingValue[attr])) {		
+						nextProcessing = createProcessingObject(processingValue[attr]);
+						nextProcessing.first = first;
+						if(first) {
+							first = false;
+						}
+						if(!isProcessingCollection) {
+							nextProcessing.key = attr;
+						}
+						processingObjectStack.push(nextProcessing);
+					}
+				}
+				catch (ex) {
+					continue;
+				}				
+			}	
+		}
+		var textJson = json.join(""); 
+		return textJson;
+		
+			
+	};
+	
+	return {
+		"stringify": stringify,
+		"stringifyWithoutRecursion": stringifyWithoutRecursion
+	}
+};
+
+

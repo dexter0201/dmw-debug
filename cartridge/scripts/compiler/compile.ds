@@ -1,0 +1,52 @@
+/**
+*   @input expression : String
+*   @output result : Object
+*   @output logs : Object
+*   @output resultClass : String
+*
+*/
+importScript("ref_dev_tools:compiler/Console.ds");
+importScript("ref_dev_tools:compiler/jsonUtils.ds");
+importPackage( dw.system );
+importPackage( dw.util );
+
+function execute( pdict : PipelineDictionary ) : Number
+{
+    var console = getConsoleInstance();
+
+    var result = new ArrayList();
+    var isError = false;   
+    
+    try {
+    	
+        var transaction = require('dw/system/Transaction');
+        transaction.begin();
+        
+        var obj = eval(pdict.expression);
+        if(!empty(obj)) {
+        	result.add(obj);
+        }
+        
+        transaction.commit();
+        
+    } catch(ex) {
+    	
+        var exMessage = ex.toString();
+        var message = exMessage;
+        if("lineNumber" in ex) {
+            message = JSON.stringify("[Line " + ex.lineNumber + "]: " + exMessage);            
+        }
+        result.add({"compileError": true, "message": message});
+      
+    }
+    
+    if(!empty(console.logs)) {
+    	result.addAll(console.logs);
+    }
+    
+    pdict.resultClass = isError ? "error" : "success";    
+ 
+    pdict.result = result;
+    pdict.logs = console.logs;  
+    return PIPELET_NEXT;
+}

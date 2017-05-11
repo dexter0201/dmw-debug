@@ -1,0 +1,22 @@
+importPackage( dw.util );
+function getConsoleInstance(){
+    return {
+        logs : new ArrayList(),
+        log : function(obj) {
+            var lineNumber = "";
+            try {
+                throw new SystemError();
+            } catch(ex) {
+                var executingLine = /at ref_dev_tools:compiler\/compile.ds#[0-9]+\(eval\).+/.exec(ex.stack)[0];
+                var tempInfo = /\(eval\).+/.exec(executingLine)[0];
+                lineNumber = /[0-9]+/.exec(tempInfo)[0];              
+            }
+            this.logs.add({
+            	"compileLogObject": true,
+            	"lineNumber": lineNumber,
+            	"loggedObject": obj
+            });
+            return "";
+        }
+    }
+}

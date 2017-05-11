@@ -1,0 +1,7 @@
+<isscript>
+	importScript("ref_dev_tools:compiler/jsonUtils.ds");	
+	var jsonUtils =  getJsonUtils();
+	//var responseText = jsonUtils.stringify(pdict.result);
+	var responseText = jsonUtils.stringifyWithoutRecursion(pdict.result);
+</isscript>
+<isprint value="${responseText}" encoding="off">
